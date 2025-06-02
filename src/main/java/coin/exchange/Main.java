@@ -1,36 +1,62 @@
 package coin.exchange;
 
+import coin.exchange.api.FetchCoin;
 import coin.exchange.model.ExchangeResponse;
-import com.google.gson.Gson;
-
-import java.io.IOException;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
+import coin.exchange.model.RateType;
+import coin.exchange.util.CurrencyConverter;
+import coin.exchange.view.Menu;
 
 public class Main {
     public static void main(String[] args) {
-        EnvReader env = new EnvReader();
-        String api = env.getEnv("API_KEY");
+        Menu menu = new Menu();
+        int option;
 
-        HttpClient client = HttpClient.newHttpClient();
+        do {
+            option = menu.showMenu();
+            if (option >= 1 && option <= 4) {
+                double amount = menu.readAmount();
 
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("https://v6.exchangerate-api.com/v6/" + api + "/latest/USD"))
-                .GET()
-                .build();
+                RateType base = null;
+                RateType target = null;
 
-        try {
-            Gson gson = new Gson();
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-            ExchangeResponse exchange = gson.fromJson(response.body(), ExchangeResponse.class);
+                switch (option) {
+                    case 1:
+                        base = RateType.BRL;
+                        target = RateType.USD;
+                        break;
+                    case 2:
+                        base = RateType.USD;
+                        target = RateType.BRL;
+                        break;
+                    case 3:
+                        base = RateType.BRL;
+                        target = RateType.EUR;
+                        break;
+                    case 4:
+                        base = RateType.EUR;
+                        target = RateType.BRL;
+                        break;
+                }
 
-            System.out.println("Moeda base: " + exchange.getBase_code());
-            System.out.println("Cotação do BRL: " + exchange.getRates().get("BRL"));
 
-        } catch (IOException | InterruptedException e) {
-            e.printStackTrace();
-        }
+                try {
+                    FetchCoin fetcher = new FetchCoin(base, target);
+                    ExchangeResponse response = fetcher.fetchToApi();
+
+                    double rate = response.getConversionRate();
+                    double convertedAmount = amount * rate;
+                    String formatted = CurrencyConverter.format(target.getCoin(), convertedAmount);
+
+                    System.out.println("Valor Convertido: " + formatted);
+                } catch (Exception e) {
+                    System.out.println("Erro no FETCH: " + e.getMessage());
+                }
+            } else if (option != 5) {
+                System.out.println("Opção ínvalida, tente novamente");
+            }
+        } while (option != 5);
+
+        menu.closeScanner();
+        System.out.println("Programa Finalizado.");
     }
 }
