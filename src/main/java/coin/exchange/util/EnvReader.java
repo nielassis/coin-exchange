@@ -1,4 +1,4 @@
-package coin.exchange;
+package coin.exchange.util;
 import io.github.cdimascio.dotenv.Dotenv;
 
 public class EnvReader {
